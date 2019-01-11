@@ -103,6 +103,9 @@ public class HTTPServer: Server {
     /// Incoming socket handler
     private var socketManager: IncomingSocketManager?
 
+    /// Incoming socket options
+    private var socketOptions: IncomingSocketOptions
+
     /**
      SSL cert configuration for handling client requests.
      
@@ -131,7 +134,8 @@ public class HTTPServer: Server {
      server.listen(on: 8080)
      ````
      */
-    public init() {
+    public init(socketOptions: IncomingSocketOptions = IncomingSocketOptions()) {
+        self.socketOptions = socketOptions
         #if os(Linux)
             // On Linux, it is not possible to set SO_NOSIGPIPE on the socket, nor is it possible
             // to pass MSG_NOSIGNAL when writing via SSL_write(). Instead, we will receive it but
@@ -168,7 +172,7 @@ public class HTTPServer: Server {
 
             try socket.listen(on: port, maxBacklogSize: maxPendingConnections, allowPortReuse: self.allowPortReuse)
 
-            let socketManager = IncomingSocketManager()
+            let socketManager = IncomingSocketManager(requestOptions: self.socketOptions)
             self.socketManager = socketManager
 
             // If a random (ephemeral) port number was requested, get the listening port
@@ -285,7 +289,17 @@ public class HTTPServer: Server {
             do {
                 let clientSocket = try listenSocket.acceptClientConnection(invokeDelegate: false)
                 let clientSource = "\(clientSocket.remoteHostname):\(clientSocket.remotePort)"
-                Log.debug("Accepted HTTP connection from: \(clientSource)")
+                if let connectionLimit = self.socketOptions.connectionLimit, socketManager.socketHandlerCount >= connectionLimit {
+                    socketManager.removeIdleSockets()
+                }
+                if let connectionLimit = self.socketOptions.connectionLimit, socketManager.socketHandlerCount >= connectionLimit {
+                    _ = try? clientSocket.write(from: "HTTP 1.1/503 Service Unavailable\nContent-Length: 0\n\n")
+                    clientSocket.close()
+                    Log.debug("Rejected connection from \(clientSource): Maximum connection limit of \(connectionLimit) reached")
+                    continue
+                } else {
+                    Log.debug("Accepted HTTP connection from: \(clientSource)")
+                }
 				
                 if listenSocket.delegate != nil {
                     DispatchQueue.global().async { [weak self] in
