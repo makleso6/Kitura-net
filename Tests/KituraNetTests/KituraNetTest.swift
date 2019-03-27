@@ -145,31 +145,6 @@ class KituraNetTest: XCTestCase {
         }
     }
 
-    func performRequest(_ method: String, path: String, close: Bool=true, callback: @escaping ClientRequest.Callback,
-                        headers: [String: String]? = nil, requestModifier: ((ClientRequest) -> Void)? = nil) {
-
-        var allHeaders = [String: String]()
-        if  let headers = headers  {
-            for  (headerName, headerValue) in headers  {
-                allHeaders[headerName] = headerValue
-            }
-        }
-        allHeaders["Content-Type"] = "text/plain"
-
-        let schema = self.useSSL ? "https" : "http"
-        var options: [ClientRequest.Options] =
-            [.method(method), .schema(schema), .hostname("localhost"), .port(Int16(self.port)), .path(path), .headers(allHeaders)]
-        if self.useSSL {
-            options.append(.disableSSLVerification)
-        }
-
-        let req = HTTP.request(options, callback: callback)
-        if let requestModifier = requestModifier {
-            requestModifier(req)
-        }
-        req.end(close: close)
-    }
-
     func expectation(line: Int, index: Int) -> XCTestExpectation {
         return self.expectation(description: "\(type(of: self)):\(line)[\(index)]")
     }

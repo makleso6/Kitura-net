@@ -29,7 +29,6 @@ var kituraNetDependencies: [Target.Dependency] = [
     .byName(name: "CHTTPParser"),
     .byName(name: "LoggerAPI"),
     .byName(name: "Socket"),
-    .target(name: "CCurl"),
     .byName(name: "SSLService")
 ]
 
@@ -47,9 +46,6 @@ kituraNetDependencies.append(contentsOf: [
 var targets: [Target] = [
     .target(
         name: "CHTTPParser"
-    ),
-    .systemLibrary(
-        name: "CCurl"
     ),
     .target(
         name: "KituraNet",
